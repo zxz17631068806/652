@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: old-cluster
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      run: old-nginx
+  template:
+    metadata:
+      labels:
+        run: old-nginx
+    spec:
+      containers:
+      - name: old-nginx
+        image: nginx:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: old
+          mountPath: /usr/share/nginx/html
+      volumes:
+      - name: old
+        hostPath:
+          path: /www
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: old-nginx
+spec:
+  selector:
+    run: old-nginx
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: old-ingress
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: "www.good.com"
+    http:
+      paths:
+      - pathType: Prefix
+        path: /prod/old/
+        backend:
+          service:
+            name: old-nginx
+            port:
+              number: 80
